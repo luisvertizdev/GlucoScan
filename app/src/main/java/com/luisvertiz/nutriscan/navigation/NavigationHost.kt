@@ -6,6 +6,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.luisvertiz.nutriscan.features.login.LoginScreen
+import com.luisvertiz.nutriscan.features.nutritiongoal.NutritionGoalScreen
+import com.luisvertiz.nutriscan.features.nutritionsetup.NutritionSetupScreen
+import com.luisvertiz.nutriscan.features.register.RegisterScreen
 
 @Composable
 fun NavigationHost(
@@ -20,16 +23,26 @@ fun NavigationHost(
     ) {
         composable<NavigationRoute.Login> {
             LoginScreen(
-                navController = navController,
+                navController = navController
             )
         }
 
         composable<NavigationRoute.Register> {
-            // TODO: Implement RegisterScreen
+            RegisterScreen(
+                navController = navController
+            )
         }
 
-        composable<NavigationRoute.Home> {
-            // TODO: Implement HomeScreen
+        composable<NavigationRoute.NutritionSetup> {
+            NutritionSetupScreen(
+                navController = navController
+            )
+        }
+
+        composable<NavigationRoute.NutritionGoal> {
+            NutritionGoalScreen(
+                navController = navController
+            )
         }
     }
 }

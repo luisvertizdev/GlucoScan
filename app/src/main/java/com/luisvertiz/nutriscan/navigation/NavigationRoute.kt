@@ -10,5 +10,12 @@ sealed interface NavigationRoute {
     data object Register : NavigationRoute
 
     @Serializable
+    data object NutritionSetup : NavigationRoute
+
+    @Serializable
+    data object NutritionGoal : NavigationRoute
+
+    @Serializable
     data object Home : NavigationRoute
 }
+

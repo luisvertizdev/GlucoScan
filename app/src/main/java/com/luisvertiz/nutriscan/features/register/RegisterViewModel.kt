@@ -1,4 +1,4 @@
-package com.luisvertiz.nutriscan.features.login
+package com.luisvertiz.nutriscan.features.register
 
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
@@ -10,9 +10,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(
-    private val loginRepository: LoginRepository
+class RegisterViewModel @Inject constructor(
+    private val registerRepository: RegisterRepository
 ) : ViewModel() {
+
+    private val _fullName: MutableStateFlow<String> = MutableStateFlow("")
+    val fullName: StateFlow<String> = _fullName
 
     private val _email: MutableStateFlow<String> = MutableStateFlow("")
     val email: StateFlow<String> = _email
@@ -20,20 +23,24 @@ class LoginViewModel @Inject constructor(
     private val _password: MutableStateFlow<String> = MutableStateFlow("")
     val password: StateFlow<String> = _password
 
-    private val _isEnabledLoginButton: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isEnabledLoginButton: StateFlow<Boolean> = _isEnabledLoginButton
+    private val _confirmPassword: MutableStateFlow<String> = MutableStateFlow("")
+    val confirmPassword: StateFlow<String> = _confirmPassword
+
+    private val _isEnabledRegisterButton: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isEnabledRegisterButton: StateFlow<Boolean> = _isEnabledRegisterButton
 
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _successRegisterMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    val successRegisterMessage: StateFlow<String?> = _successRegisterMessage
+
     private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
-    private val _goToNutritionSetup: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val goToNutritionSetup: StateFlow<Boolean> = _goToNutritionSetup
-
-    private val _goToHome: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val goToHome: StateFlow<Boolean> = _goToHome
+    fun setFullName(fullName: String) = viewModelScope.launch {
+        _fullName.value = fullName
+    }
 
     fun setEmail(email: String) = viewModelScope.launch {
         _email.value = email
@@ -43,17 +50,22 @@ class LoginViewModel @Inject constructor(
         _password.value = password
     }
 
+    fun setConfirmPassword(confirmPassword: String) = viewModelScope.launch {
+        _confirmPassword.value = confirmPassword
+    }
+
     fun validateInputs() = viewModelScope.launch {
         val isEmailValid: Boolean = Patterns.EMAIL_ADDRESS.matcher(_email.value).matches()
         val isPasswordValid: Boolean = _password.value.length >= 8
-        _isEnabledLoginButton.value = isEmailValid && isPasswordValid
+        val isPasswordMatching: Boolean = _password.value == _confirmPassword.value
+        _isEnabledRegisterButton.value = isEmailValid && isPasswordValid && isPasswordMatching
     }
 
-    fun login() = viewModelScope.launch {
+    fun register() = viewModelScope.launch {
         try {
             _isLoading.value = true
-            loginRepository.login(_email.value, _password.value)
-            _goToNutritionSetup.value = true
+            registerRepository.register(_fullName.value,_email.value, _password.value)
+            _successRegisterMessage.value = "Registro exitoso, verifica tu correo electrónico para poder iniciar sesión."
         } catch (exception: Exception) {
             _errorMessage.value = exception.message
         } finally {
@@ -63,5 +75,9 @@ class LoginViewModel @Inject constructor(
 
     fun dismissErrorDialog() = viewModelScope.launch {
         _errorMessage.value = null
+    }
+
+    fun dismissSuccessRegisterDialog() = viewModelScope.launch {
+        _successRegisterMessage.value = null
     }
 }
