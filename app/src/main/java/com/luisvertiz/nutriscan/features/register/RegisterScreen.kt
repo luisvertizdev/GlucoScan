@@ -17,6 +17,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,6 +66,8 @@ fun RegisterScreen(
     val isLoading: Boolean by registerViewModel.isLoading.collectAsState()
     val errorMessage: String? by registerViewModel.errorMessage.collectAsState()
     val successRegisterMessage: String? by registerViewModel.successRegisterMessage.collectAsState()
+    val isPasswordVisible: Boolean by registerViewModel.isPasswordVisible.collectAsState()
+    val isConfirmPasswordVisible: Boolean by registerViewModel.isConfirmPasswordVisible.collectAsState()
 
     BackHandler {
         navController.popBackStack()
@@ -111,20 +117,24 @@ fun RegisterScreen(
 
                 PasswordTextField(
                     password = password,
+                    isPasswordVisible = isPasswordVisible,
                     onPasswordValueChange = { password ->
                         registerViewModel.setPassword(password)
                         registerViewModel.validateInputs()
-                    }
+                    },
+                    onPasswordVisibilityClick = { registerViewModel.togglePasswordVisibility() }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ConfirmPasswordTextField(
                     confirmPassword = confirmPassword,
+                    isConfirmPasswordVisible = isConfirmPasswordVisible,
                     onConfirmPasswordValueChange = { confirmPassword ->
                         registerViewModel.setConfirmPassword(confirmPassword)
                         registerViewModel.validateInputs()
-                    }
+                    },
+                    onConfirmPasswordVisibilityClick = { registerViewModel.toggleConfirmPasswordVisibility() }
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -229,13 +239,32 @@ fun EmailTextField(
 @Composable
 fun PasswordTextField(
     password: String,
+    isPasswordVisible: Boolean,
     onPasswordValueChange: (password: String) -> Unit,
+    onPasswordVisibilityClick: () -> Unit
 ) {
     OutlinedTextField(
         value = password,
         onValueChange = { password -> onPasswordValueChange(password) },
         label = { Text("Contraseña") },
         modifier = Modifier.fillMaxWidth(),
+        visualTransformation = if (isPasswordVisible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
+        trailingIcon = {
+            val image = if (isPasswordVisible) {
+                Icons.Filled.Visibility
+            } else {
+                Icons.Filled.VisibilityOff
+            }
+            IconButton(
+                onClick = { onPasswordVisibilityClick() }
+            ) {
+                Icon(imageVector = image, contentDescription = null)
+            }
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
@@ -249,13 +278,32 @@ fun PasswordTextField(
 @Composable
 fun ConfirmPasswordTextField(
     confirmPassword: String,
+    isConfirmPasswordVisible: Boolean,
     onConfirmPasswordValueChange: (confirmPassword: String) -> Unit,
+    onConfirmPasswordVisibilityClick: () -> Unit
 ) {
     OutlinedTextField(
         value = confirmPassword,
         onValueChange = { confirmPassword -> onConfirmPasswordValueChange(confirmPassword) },
         label = { Text("Confirmar contraseña") },
         modifier = Modifier.fillMaxWidth(),
+        visualTransformation = if (isConfirmPasswordVisible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
+        trailingIcon = {
+            val image = if (isConfirmPasswordVisible) {
+                Icons.Filled.Visibility
+            } else {
+                Icons.Filled.VisibilityOff
+            }
+            IconButton(
+                onClick = { onConfirmPasswordVisibilityClick() }
+            ) {
+                Icon(imageVector = image, contentDescription = null)
+            }
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(

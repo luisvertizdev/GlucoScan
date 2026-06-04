@@ -38,6 +38,12 @@ class RegisterViewModel @Inject constructor(
     private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
+    private val _isPasswordVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isPasswordVisible: StateFlow<Boolean> = _isPasswordVisible
+
+    private val _isConfirmPasswordVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isConfirmPasswordVisible: StateFlow<Boolean> = _isConfirmPasswordVisible
+
     fun setFullName(fullName: String) = viewModelScope.launch {
         _fullName.value = fullName
     }
@@ -79,5 +85,13 @@ class RegisterViewModel @Inject constructor(
 
     fun dismissSuccessRegisterDialog() = viewModelScope.launch {
         _successRegisterMessage.value = null
+    }
+
+    fun togglePasswordVisibility() {
+        _isPasswordVisible.value = !_isPasswordVisible.value
+    }
+
+    fun toggleConfirmPasswordVisibility() {
+        _isConfirmPasswordVisible.value = _isConfirmPasswordVisible.value.not()
     }
 }

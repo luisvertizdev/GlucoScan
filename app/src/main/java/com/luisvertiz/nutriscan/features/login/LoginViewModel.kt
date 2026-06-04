@@ -35,6 +35,9 @@ class LoginViewModel @Inject constructor(
     private val _goToHome: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val goToHome: StateFlow<Boolean> = _goToHome
 
+    private val _isPasswordVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isPasswordVisible: StateFlow<Boolean> = _isPasswordVisible
+
     fun setEmail(email: String) = viewModelScope.launch {
         _email.value = email
     }
@@ -63,5 +66,9 @@ class LoginViewModel @Inject constructor(
 
     fun dismissErrorDialog() = viewModelScope.launch {
         _errorMessage.value = null
+    }
+
+    fun togglePasswordVisibility() {
+        _isPasswordVisible.value = _isPasswordVisible.value.not()
     }
 }
