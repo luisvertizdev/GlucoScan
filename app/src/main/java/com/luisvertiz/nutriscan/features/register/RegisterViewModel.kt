@@ -44,38 +44,50 @@ class RegisterViewModel @Inject constructor(
     private val _isConfirmPasswordVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isConfirmPasswordVisible: StateFlow<Boolean> = _isConfirmPasswordVisible
 
-    fun setFullName(fullName: String) = viewModelScope.launch {
-        _fullName.value = fullName
+    fun setFullName(fullName: String) {
+        viewModelScope.launch {
+            _fullName.value = fullName
+        }
     }
 
-    fun setEmail(email: String) = viewModelScope.launch {
-        _email.value = email
+    fun setEmail(email: String) {
+        viewModelScope.launch {
+            _email.value = email
+        }
     }
 
-    fun setPassword(password: String) = viewModelScope.launch {
-        _password.value = password
+    fun setPassword(password: String) {
+        viewModelScope.launch {
+            _password.value = password
+        }
     }
 
-    fun setConfirmPassword(confirmPassword: String) = viewModelScope.launch {
-        _confirmPassword.value = confirmPassword
+    fun setConfirmPassword(confirmPassword: String) {
+        viewModelScope.launch {
+            _confirmPassword.value = confirmPassword
+        }
     }
 
-    fun validateInputs() = viewModelScope.launch {
-        val isEmailValid: Boolean = Patterns.EMAIL_ADDRESS.matcher(_email.value).matches()
-        val isPasswordValid: Boolean = _password.value.length >= 8
-        val isPasswordMatching: Boolean = _password.value == _confirmPassword.value
-        _isEnabledRegisterButton.value = isEmailValid && isPasswordValid && isPasswordMatching
+    fun validateInputs() {
+        viewModelScope.launch {
+            val isEmailValid: Boolean = Patterns.EMAIL_ADDRESS.matcher(_email.value).matches()
+            val isPasswordValid: Boolean = _password.value.length >= 8
+            val isPasswordMatching: Boolean = _password.value == _confirmPassword.value
+            _isEnabledRegisterButton.value = isEmailValid && isPasswordValid && isPasswordMatching
+        }
     }
 
-    fun register() = viewModelScope.launch {
-        try {
-            _isLoading.value = true
-            registerRepository.register(_fullName.value,_email.value, _password.value)
-            _successRegisterMessage.value = "Registro exitoso, verifica tu correo electrónico para poder iniciar sesión."
-        } catch (exception: Exception) {
-            _errorMessage.value = exception.message
-        } finally {
-            _isLoading.value = false
+    fun register() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                registerRepository.register(_fullName.value,_email.value, _password.value)
+                _successRegisterMessage.value = "Registro exitoso, verifica tu correo electrónico para poder iniciar sesión."
+            } catch (exception: Exception) {
+                _errorMessage.value = exception.message
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

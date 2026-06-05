@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.luisvertiz.nutriscan.R
-import com.luisvertiz.nutriscan.navigation.NavigationRoute
+import com.luisvertiz.nutriscan.navigation.main.MainNavigationRoute
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,26 +55,21 @@ import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 fun LoginScreen(
     modifier: Modifier = Modifier,
     loginViewModel: LoginViewModel = hiltViewModel(),
-    navController: NavHostController,
+    mainNavController: NavHostController,
 ) {
     val email: String by loginViewModel.email.collectAsState()
     val password: String by loginViewModel.password.collectAsState()
     val isEnabledLoginButton: Boolean by loginViewModel.isEnabledLoginButton.collectAsState()
-    val goToNutritionSetup: Boolean by loginViewModel.goToNutritionSetup.collectAsState()
-    val goToHome: Boolean by loginViewModel.goToHome.collectAsState()
+    val goToLanding: Boolean by loginViewModel.goToLanding.collectAsState()
     val isLoading: Boolean by loginViewModel.isLoading.collectAsState()
     val errorMessage: String? by loginViewModel.errorMessage.collectAsState()
     val isPasswordVisible: Boolean by loginViewModel.isPasswordVisible.collectAsState()
 
-    LaunchedEffect(Unit) {
-        if (goToHome) {
-            navController.navigate(NavigationRoute.Home) {
-                popUpTo(NavigationRoute.Login) { inclusive = true }
+    LaunchedEffect(goToLanding) {
+        if (goToLanding) {
+            mainNavController.navigate(MainNavigationRoute.Landing) {
+                popUpTo(MainNavigationRoute.Login) { inclusive = true }
             }
-        }
-
-        if (goToNutritionSetup) {
-            navController.navigate(NavigationRoute.NutritionSetup)
         }
     }
 
@@ -91,7 +86,10 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                BannerImage()
+                Image(
+                    painter = painterResource(R.drawable.ic_banner),
+                    contentDescription = null
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -126,7 +124,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 RegisterSection(
-                    onRegisterClick = { navController.navigate(NavigationRoute.Register) }
+                    onRegisterClick = { mainNavController.navigate(MainNavigationRoute.Register) }
                 )
             }
         }
@@ -136,19 +134,6 @@ fun LoginScreen(
         ErrorDialog(
             errorMessage = errorMessage.orEmpty(),
             onDismiss = { loginViewModel.dismissErrorDialog() }
-        )
-    }
-}
-
-@Composable
-fun BannerImage() {
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_banner),
-            contentDescription = null
         )
     }
 }

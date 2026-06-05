@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.luisvertiz.nutriscan.R
-import com.luisvertiz.nutriscan.navigation.NavigationRoute
+import com.luisvertiz.nutriscan.navigation.main.MainNavigationRoute
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,7 +56,7 @@ import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 fun RegisterScreen(
     modifier: Modifier = Modifier,
     registerViewModel: RegisterViewModel = hiltViewModel(),
-    navController: NavHostController,
+    mainNavController: NavHostController,
 ) {
     val fullName: String by registerViewModel.fullName.collectAsState()
     val email: String by registerViewModel.email.collectAsState()
@@ -69,16 +69,12 @@ fun RegisterScreen(
     val isPasswordVisible: Boolean by registerViewModel.isPasswordVisible.collectAsState()
     val isConfirmPasswordVisible: Boolean by registerViewModel.isConfirmPasswordVisible.collectAsState()
 
-    BackHandler {
-        navController.popBackStack()
-    }
-
     Scaffold(
         modifier = modifier,
         containerColor = Color.White,
         topBar = {
             RegisterTopBar(
-                onBackClick = {  navController.popBackStack() }
+                onBackClick = {  mainNavController.popBackStack() }
             )
         },
         content = { contentPadding ->
@@ -91,7 +87,10 @@ fun RegisterScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                BannerImage()
+                Image(
+                    painter = painterResource(R.drawable.ic_banner),
+                    contentDescription = null
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -161,8 +160,8 @@ fun RegisterScreen(
             onDismiss = { registerViewModel.dismissSuccessRegisterDialog() },
             onGoToLogin = {
                 registerViewModel.dismissSuccessRegisterDialog()
-                navController.navigate(NavigationRoute.Login) {
-                    popUpTo(NavigationRoute.Register) { inclusive = true }
+                mainNavController.navigate(MainNavigationRoute.Login) {
+                    popUpTo(MainNavigationRoute.Register) { inclusive = true }
                 }
             }
         )
@@ -312,19 +311,6 @@ fun ConfirmPasswordTextField(
             cursorColor = PrimaryGreen
         )
     )
-}
-
-@Composable
-fun BannerImage() {
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_banner),
-            contentDescription = null
-        )
-    }
 }
 
 @Composable

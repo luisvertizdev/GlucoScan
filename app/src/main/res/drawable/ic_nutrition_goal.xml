@@ -1,0 +1,62 @@
+<!--
+  ~ Copyright (C) 2026 The Android Open Source Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="215dp"
+    android:height="180dp"
+    android:viewportWidth="215"
+    android:viewportHeight="180">
+  <path
+      android:pathData="M0,0h215v180h-215z"
+      android:fillColor="#ECECEC"/>
+  <path
+      android:pathData="M47,25L168,25A12,12 0,0 1,180 37L180,143A12,12 0,0 1,168 155L47,155A12,12 0,0 1,35 143L35,37A12,12 0,0 1,47 25z"
+      android:fillColor="#D8D8D8"/>
+  <path
+      android:pathData="M94,12L120,12A12,12 0,0 1,132 24L132,28A12,12 0,0 1,120 40L94,40A12,12 0,0 1,82 28L82,24A12,12 0,0 1,94 12z"
+      android:fillColor="#D8D8D8"/>
+  <path
+      android:pathData="M107,25m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0"
+      android:fillColor="#ECECEC"/>
+  <path
+      android:pathData="M107,55C94,55 82,60 75,65V95C75,120 92,135 107,142C122,135 139,120 139,95V65C132,60 120,55 107,55Z"
+      android:fillColor="#FFFFFF"/>
+  <path
+      android:pathData="M107,90m-27,0a27,27 0,1 1,54 0a27,27 0,1 1,-54 0"
+      android:strokeWidth="5"
+      android:fillColor="#00000000"
+      android:strokeColor="#2DB55D"/>
+  <path
+      android:pathData="M127,74A22,22 0,0 1,127 106"
+      android:strokeWidth="5"
+      android:fillColor="#00000000"
+      android:strokeColor="#2DB55D"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M118,80A12,12 0,0 1,118 100"
+      android:strokeWidth="5"
+      android:fillColor="#00000000"
+      android:strokeColor="#2DB55D"
+      android:strokeLineCap="round"/>
+  <path
+      android:fillColor="#FF000000"
+      android:pathData="M107,68L107,90"
+      android:strokeWidth="5"
+      android:strokeColor="#2DB55D"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M107,90m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"
+      android:fillColor="#2DB55D"/>
+</vector>
