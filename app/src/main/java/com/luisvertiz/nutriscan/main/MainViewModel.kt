@@ -29,12 +29,13 @@ class MainViewModel @Inject constructor() : ViewModel() {
             try {
                 _isLoading.value = true
                 val firebaseUser: FirebaseUser? = FirebaseAuth.getInstance().currentUser
+
                 if (firebaseUser != null) {
-                    _startDestination.value = MainNavigationRoute.Landing
+                    _startDestination.value = MainNavigationRoute.Dashboard
                 } else {
                     _startDestination.value = MainNavigationRoute.Login
                 }
-            } catch (exception: Exception) {
+            } catch (_: Exception) {
                 _startDestination.value = MainNavigationRoute.Login
             } finally {
                 _isLoading.value = false

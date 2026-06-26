@@ -14,16 +14,16 @@ fun BottomBarNavigationHost(
     mainNavController: NavHostController,
     bottomBarNavController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: BottomBarNavigationRoute = BottomBarNavigationRoute.Home
+    startDestination: BottomBarNavigationRoute,
 ) {
     NavHost(
         navController = bottomBarNavController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier,
     ) {
         composable<BottomBarNavigationRoute.Home> {
             HomeScreen(
-                rootNavController = mainNavController
+                rootNavController = mainNavController,
             )
         }
 
@@ -32,7 +32,9 @@ fun BottomBarNavigationHost(
         }
 
         composable<BottomBarNavigationRoute.Profile> {
-            ProfileScreen()
+            ProfileScreen(
+                rootNavController = mainNavController,
+            )
         }
     }
 }

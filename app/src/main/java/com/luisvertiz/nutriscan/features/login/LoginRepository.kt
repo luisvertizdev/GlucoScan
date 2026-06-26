@@ -5,6 +5,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseUser
+import com.luisvertiz.nutriscan.error.ErrorHandler.EmailNotVerifiedError
+import com.luisvertiz.nutriscan.error.ErrorHandler.InvalidCredentialsError
+import com.luisvertiz.nutriscan.error.ErrorHandler.InvalidUserError
+import com.luisvertiz.nutriscan.error.ErrorHandler.UnknownError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -12,27 +16,29 @@ import javax.inject.Inject
 
 class LoginRepository @Inject constructor() {
 
-    suspend fun login(email: String, password: String) {
-        withContext(Dispatchers.IO) {
-            try {
-                val authResult: AuthResult = FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password).await()
-                val firebaseUser: FirebaseUser? = authResult.user
-                firebaseUser?.reload()?.await()
+    suspend fun login(
+        email: String,
+        password: String,
+    ) = withContext(Dispatchers.IO) {
+        try {
+            val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+            val authResult: AuthResult = firebaseAuth.signInWithEmailAndPassword(
+                email,
+                password,
+            ).await()
 
-                if (firebaseUser == null) {
-                    throw Exception("Ocurrió un error inesperado, inténtalo de nuevo.")
-                }
+            val firebaseUser: FirebaseUser = authResult.user ?: throw UnknownError()
+            firebaseUser.reload().await()
 
-                if (firebaseUser.isEmailVerified.not()) {
-                    throw Exception("Verifica tu correo electrónico.")
-                }
-            } catch (exception: FirebaseAuthInvalidUserException) {
-                throw Exception("El correo electrónico no está registrado.")
-            } catch (exception: FirebaseAuthInvalidCredentialsException) {
-                throw Exception("La contraseña es incorrecta.")
-            } catch (exception: Exception) {
-                throw exception
+            if (firebaseUser.isEmailVerified.not()) {
+                throw EmailNotVerifiedError()
             }
+        } catch (_: FirebaseAuthInvalidUserException) {
+            throw InvalidUserError()
+        } catch (_: FirebaseAuthInvalidCredentialsException) {
+            throw InvalidCredentialsError()
+        } catch (_: Exception) {
+            throw UnknownError()
         }
     }
 }

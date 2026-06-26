@@ -6,14 +6,14 @@ enum class ActivityLevelModel(
 ) {
     LOW(
         description = "Sedentario",
-        nutritionFactor = 1.2
+        nutritionFactor = 1.2,
     ),
     MODERATE(
         description = "Moderado",
-        nutritionFactor = 1.55
+        nutritionFactor = 1.55,
     ),
     HIGH(
         description = "Activo",
-        nutritionFactor = 1.725
+        nutritionFactor = 1.725,
     );
 }

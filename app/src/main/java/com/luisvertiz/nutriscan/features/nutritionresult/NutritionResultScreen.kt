@@ -18,20 +18,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,19 +38,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.luisvertiz.nutriscan.R
-import com.luisvertiz.nutriscan.features.login.ErrorDialog
+import com.luisvertiz.nutriscan.component.ErrorDialog
 import com.luisvertiz.nutriscan.model.NutritionResultModel
-import com.luisvertiz.nutriscan.ui.theme.PrimaryBlue
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 import com.luisvertiz.nutriscan.ui.theme.PrimaryOrange
-import com.luisvertiz.nutriscan.ui.theme.PrimaryPurple
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,49 +59,70 @@ fun NutritionResultScreen(
     nutritionResultViewModel: NutritionResultViewModel = hiltViewModel(),
     mainNavController: NavHostController,
 ) {
-    val nutritionResult: NutritionResultModel by nutritionResultViewModel.nutritionResult.collectAsState()
-    val errorMessage: String? by nutritionResultViewModel.errorMessage.collectAsState()
+    val uiState: UiState by nutritionResultViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        nutritionResultViewModel.uiEffect.collect { effect ->
+            when(effect) {
+                is UiEffect.GoBack -> {
+                    mainNavController.popBackStack()
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier,
         containerColor = Color.White,
         content = { contentPadding ->
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(contentPadding)
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top
+            Box(
+                modifier = Modifier.fillMaxSize(),
             ) {
-                HeaderSection()
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                } else {
+                    Column(
+                        modifier = modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(contentPadding)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        HeaderSection()
 
-                Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                DailyGoalSection(nutritionResult = nutritionResult)
+                        DailyGoalSection(nutritionResult = uiState.nutritionResult)
 
-                Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                NutritionResultButton(
-                    onNutritionResultClick = {
-                        mainNavController.popBackStack()
+                        NutritionResultButton(
+                            onNutritionResultClick = {
+                                nutritionResultViewModel.goBack()
+                                mainNavController.popBackStack()
+                            }
+                        )
                     }
-                )
+                }
             }
         }
     )
 
-    if (errorMessage != null) {
+    uiState.idErrorMessage?.let { idErrorMessage ->
         ErrorDialog(
-            errorMessage = errorMessage.orEmpty(),
-            onDismiss = { nutritionResultViewModel.dismissErrorDialog() }
+            message = stringResource(idErrorMessage),
+            buttonText = stringResource(R.string.error_dialog_button_text),
+            onDismiss = { nutritionResultViewModel.dismissErrorDialog() },
         )
     }
 }
 
 @Composable
-fun HeaderSection() {
+private fun HeaderSection() {
     Image(
         painter = painterResource(R.drawable.ic_nutrition_result_success),
         contentDescription = null
@@ -126,7 +146,7 @@ fun HeaderSection() {
 }
 
 @Composable
-fun DailyGoalSection(nutritionResult: NutritionResultModel) {
+private fun DailyGoalSection(nutritionResult: NutritionResultModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -138,7 +158,7 @@ fun DailyGoalSection(nutritionResult: NutritionResultModel) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Tu objetivo diario",
+                text = "Plan diario para el control de glucosa",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -151,17 +171,7 @@ fun DailyGoalSection(nutritionResult: NutritionResultModel) {
                 iconColor = PrimaryGreen,
                 value = nutritionResult.dailyCalories.toString(),
                 unit = "kcal",
-                label = "Calorías"
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            MacronutrientSection(
-                icon = Icons.Default.FitnessCenter,
-                iconColor = PrimaryBlue,
-                value = nutritionResult.dailyProtein.toString(),
-                unit = "g",
-                label = "Proteínas"
+                label = "Calorías recomendadas"
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -169,26 +179,18 @@ fun DailyGoalSection(nutritionResult: NutritionResultModel) {
             MacronutrientSection(
                 icon = Icons.Default.Grain,
                 iconColor = PrimaryOrange,
-                value = nutritionResult.dailyCarbs.toString(),
+                value = nutritionResult.dailyCarbsGr.toString(),
                 unit = "g",
-                label = "Carbohidratos"
+                label = "Carbohidratos recomendados"
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            MacronutrientSection(
-                icon = Icons.Default.WaterDrop,
-                iconColor = PrimaryPurple,
-                value = nutritionResult.dailyFat.toString(),
-                unit = "g",
-                label = "Grasas"
-            )
         }
     }
 }
 
 @Composable
-fun MacronutrientSection(
+private fun MacronutrientSection(
     icon: ImageVector,
     iconColor: Color,
     value: String,
@@ -243,7 +245,7 @@ fun MacronutrientSection(
 }
 
 @Composable
-fun NutritionResultButton(
+private fun NutritionResultButton(
     onNutritionResultClick: () -> Unit
 ) {
     Button(

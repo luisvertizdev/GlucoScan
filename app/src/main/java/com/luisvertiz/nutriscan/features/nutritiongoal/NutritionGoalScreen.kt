@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,29 +39,26 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.luisvertiz.nutriscan.R
+import com.luisvertiz.nutriscan.component.ErrorDialog
 import com.luisvertiz.nutriscan.model.ActivityLevelModel
 import com.luisvertiz.nutriscan.model.GenderModel
-import com.luisvertiz.nutriscan.model.GoalModel
+import com.luisvertiz.nutriscan.model.DiabetesTypeModel
 import com.luisvertiz.nutriscan.navigation.main.MainNavigationRoute
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,28 +67,20 @@ fun NutritionGoalScreen(
     nutritionGoalViewModel: NutritionGoalViewModel = hiltViewModel(),
     mainNavController: NavHostController,
 ) {
-    val birthDate: String by nutritionGoalViewModel.birthDate.collectAsState()
-    val gender: GenderModel? by nutritionGoalViewModel.gender.collectAsState()
-    val activityLevel: ActivityLevelModel? by nutritionGoalViewModel.activityLevel.collectAsState()
-    val mainGoalModel: GoalModel? by nutritionGoalViewModel.mainGoalModel.collectAsState()
-    val weight: String by nutritionGoalViewModel.weight.collectAsState()
-    val height: String by nutritionGoalViewModel.height.collectAsState()
-    val isEnabledCalculateGoalButton: Boolean by nutritionGoalViewModel.isEnabledCalculateGoalButton.collectAsState()
-    val goToNutritionResult: Boolean by nutritionGoalViewModel.goToNutritionResult.collectAsState()
-    val isLoading: Boolean by nutritionGoalViewModel.isLoading.collectAsState()
-    val errorMessage: String? by nutritionGoalViewModel.errorMessage.collectAsState()
-
-    var showDatePicker by remember { mutableStateOf(false) }
-    var expandedGender by remember { mutableStateOf(false) }
-    var expandedActivityLevel by remember { mutableStateOf(false) }
-    var expandedMainGoal by remember { mutableStateOf(false) }
-
     val datePickerState = rememberDatePickerState()
+    val uiState: UiState by nutritionGoalViewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(goToNutritionResult) {
-        if (goToNutritionResult) {
-            mainNavController.navigate(MainNavigationRoute.NutritionResult) {
-                popUpTo(MainNavigationRoute.Login) { inclusive = true }
+    LaunchedEffect(Unit) {
+        nutritionGoalViewModel.uiEffect.collect { effect ->
+            when(effect) {
+                is UiEffect.GoBack -> {
+                    mainNavController.popBackStack()
+                }
+                is UiEffect.GoToNutritionResult -> {
+                    mainNavController.navigate(MainNavigationRoute.NutritionResult) {
+                        popUpTo(MainNavigationRoute.NutritionGoal) { inclusive = true }
+                    }
+                }
             }
         }
     }
@@ -120,17 +108,17 @@ fun NutritionGoalScreen(
                 val isPressed by interactionSource.collectIsPressedAsState()
 
                 if (isPressed) {
-                    showDatePicker = true
+                    nutritionGoalViewModel.showDatePicker(true)
                 }
 
                 OutlinedTextField(
-                    value = birthDate,
+                    value = uiState.birthDate,
                     onValueChange = { birthDate -> nutritionGoalViewModel.setBirthDate(birthDate) },
-                    label = { Text("Fecha de nacimiento") },
+                    label = { Text(stringResource(R.string.label_birthday)) },
                     modifier = Modifier.fillMaxWidth(),
                     readOnly = true,
                     interactionSource = interactionSource,
-                    placeholder = { Text("DD / MM / AAAA") },
+                    placeholder = { Text(stringResource(R.string.placeholder_birthday)) },
                     trailingIcon = {
                         Icon(imageVector = Icons.Default.CalendarToday, contentDescription = null)
                     },
@@ -141,25 +129,22 @@ fun NutritionGoalScreen(
                     )
                 )
 
-                if (showDatePicker) {
+                if (uiState.showDatePicker) {
                     DatePickerDialog(
-                        onDismissRequest = { showDatePicker = false },
+                        onDismissRequest = { nutritionGoalViewModel.showDatePicker(false) },
                         confirmButton = {
                             TextButton(onClick = {
                                 datePickerState.selectedDateMillis?.let { millis ->
-                                    val sdf = SimpleDateFormat("dd / MM / yyyy", Locale.getDefault())
-                                    sdf.timeZone = TimeZone.getTimeZone("UTC")
-                                    val date = sdf.format(Date(millis))
-                                    nutritionGoalViewModel.setBirthDate(date)
+                                    nutritionGoalViewModel.setBirthDate(millis)
                                 }
-                                showDatePicker = false
+                                nutritionGoalViewModel.showDatePicker(false)
                             }) {
-                                Text("Aceptar", color = PrimaryGreen)
+                                Text(stringResource(R.string.date_picker_confirm_button_text), color = PrimaryGreen)
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showDatePicker = false }) {
-                                Text("Cancelar", color = PrimaryGreen)
+                            TextButton(onClick = { nutritionGoalViewModel.showDatePicker(false) }) {
+                                Text(stringResource(R.string.date_picker_dismiss_button_text), color = PrimaryGreen)
                             }
                         }
                     ) {
@@ -170,17 +155,17 @@ fun NutritionGoalScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ExposedDropdownMenuBox(
-                    expanded = expandedGender,
-                    onExpandedChange = { expandedGender = !expandedGender },
+                    expanded = uiState.isExpandedGenderDropdown,
+                    onExpandedChange = { nutritionGoalViewModel.toggleGenderDropdown() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = gender?.description ?: "",
+                        value = uiState.gender?.description.orEmpty(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Sexo") },
-                        placeholder = { Text("Seleccionar") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGender) },
+                        label = { Text(stringResource(R.string.label_gender)) },
+                        placeholder = { Text(stringResource(R.string.placeholder_select)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = uiState.isExpandedGenderDropdown) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryGreen,
                             focusedLabelColor = PrimaryGreen,
@@ -192,15 +177,15 @@ fun NutritionGoalScreen(
                     )
 
                     ExposedDropdownMenu(
-                        expanded = expandedGender,
-                        onDismissRequest = { expandedGender = false }
+                        expanded = uiState.isExpandedGenderDropdown,
+                        onDismissRequest = { nutritionGoalViewModel.toggleGenderDropdown() }
                     ) {
                         GenderModel.entries.forEach { genderModel ->
                             DropdownMenuItem(
                                 text = { Text(text = genderModel.description) },
                                 onClick = {
                                     nutritionGoalViewModel.setGender(genderModel)
-                                    expandedGender = false
+                                    nutritionGoalViewModel.toggleGenderDropdown()
                                 }
                             )
                         }
@@ -210,10 +195,10 @@ fun NutritionGoalScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = weight,
-                    onValueChange = { weight -> nutritionGoalViewModel.setWeight(weight) },
-                    label = { Text("Peso actual (kg)") },
-                    placeholder = { Text("Ej. 70") },
+                    value = uiState.weightKg,
+                    onValueChange = { weight -> nutritionGoalViewModel.setWeightKg(weight) },
+                    label = { Text(stringResource(R.string.label_weight_kg)) },
+                    placeholder = { Text(stringResource(R.string.placeholder_weight_kg)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
@@ -227,10 +212,10 @@ fun NutritionGoalScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = height,
-                    onValueChange = { height -> nutritionGoalViewModel.setHeight(height) },
-                    label = { Text("Estatura (cm)") },
-                    placeholder = { Text("Ej. 175") },
+                    value = uiState.heightCm,
+                    onValueChange = { height -> nutritionGoalViewModel.setHeightCm(height) },
+                    label = { Text(stringResource(R.string.label_height_cm)) },
+                    placeholder = { Text(stringResource(R.string.placeholder_height_cm)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
@@ -244,17 +229,17 @@ fun NutritionGoalScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ExposedDropdownMenuBox(
-                    expanded = expandedActivityLevel,
-                    onExpandedChange = { expandedActivityLevel = !expandedActivityLevel },
+                    expanded = uiState.isExpandedActivityLevelDropdown,
+                    onExpandedChange = { nutritionGoalViewModel.toggleActivityLevelDropdown() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = activityLevel?.description ?: "",
+                        value = uiState.activityLevel?.description.orEmpty(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Nivel de actividad") },
-                        placeholder = { Text("Seleccionar") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedActivityLevel) },
+                        label = { Text(stringResource(R.string.label_activity_level)) },
+                        placeholder = { Text(stringResource(R.string.placeholder_select)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = uiState.isExpandedActivityLevelDropdown) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryGreen,
                             focusedLabelColor = PrimaryGreen,
@@ -266,15 +251,15 @@ fun NutritionGoalScreen(
                     )
 
                     ExposedDropdownMenu(
-                        expanded = expandedActivityLevel,
-                        onDismissRequest = { expandedActivityLevel = false }
+                        expanded = uiState.isExpandedActivityLevelDropdown,
+                        onDismissRequest = { nutritionGoalViewModel.toggleActivityLevelDropdown() }
                     ) {
                         ActivityLevelModel.entries.forEach { levelActivityModel ->
                             DropdownMenuItem(
                                 text = { Text(text = levelActivityModel.description) },
                                 onClick = {
                                     nutritionGoalViewModel.setActivityLevel(levelActivityModel)
-                                    expandedActivityLevel = false
+                                    nutritionGoalViewModel.toggleActivityLevelDropdown()
                                 }
                             )
                         }
@@ -284,17 +269,17 @@ fun NutritionGoalScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ExposedDropdownMenuBox(
-                    expanded = expandedMainGoal,
-                    onExpandedChange = { expandedMainGoal = !expandedMainGoal },
+                    expanded = uiState.isExpandedDiabetesTypeDropdown,
+                    onExpandedChange = { nutritionGoalViewModel.toggleDiabetesTypeDropdown() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = mainGoalModel?.description ?: "",
+                        value = uiState.diabetesType?.description.orEmpty(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Objetivo principal") },
-                        placeholder = { Text("Seleccionar") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMainGoal) },
+                        label = { Text(stringResource(R.string.label_diabetes_type)) },
+                        placeholder = { Text(stringResource(R.string.placeholder_select)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = uiState.isExpandedDiabetesTypeDropdown) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryGreen,
                             focusedLabelColor = PrimaryGreen,
@@ -306,15 +291,15 @@ fun NutritionGoalScreen(
                     )
 
                     ExposedDropdownMenu(
-                        expanded = expandedMainGoal,
-                        onDismissRequest = { expandedMainGoal = false }
+                        expanded = uiState.isExpandedDiabetesTypeDropdown,
+                        onDismissRequest = { nutritionGoalViewModel.toggleDiabetesTypeDropdown() }
                     ) {
-                        GoalModel.entries.forEach { mainGoalModel ->
+                        DiabetesTypeModel.entries.forEach { diabetesType ->
                             DropdownMenuItem(
-                                text = { Text(text = mainGoalModel.description) },
+                                text = { Text(text = diabetesType.description) },
                                 onClick = {
-                                    nutritionGoalViewModel.setMainGoal(mainGoalModel)
-                                    expandedMainGoal = false
+                                    nutritionGoalViewModel.setDiabetesType(diabetesType)
+                                    nutritionGoalViewModel.toggleDiabetesTypeDropdown()
                                 }
                             )
                         }
@@ -324,37 +309,21 @@ fun NutritionGoalScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 CalculateGoalButton(
-                    isLoading = isLoading,
-                    isEnabledCalculateGoalButton = isEnabledCalculateGoalButton,
+                    isLoading = uiState.isLoading,
+                    isEnabledCalculateGoalButton = uiState.isEnabledCalculateGoalButton,
                     onCalculateGoalClick = { nutritionGoalViewModel.calculateNutritionGoal() }
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
-
             }
         }
     )
 
-    if (errorMessage != null) {
-        AlertDialog(
-            onDismissRequest = {
-                nutritionGoalViewModel.dismissError()
-            },
-            text = {
-                Text(text = errorMessage.orEmpty())
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        nutritionGoalViewModel.dismissError()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryGreen
-                    )
-                ) {
-                    Text("Entendido")
-                }
-            }
+    uiState.idErrorMessage?.let { idErrorMessage ->
+        ErrorDialog(
+            message = stringResource(idErrorMessage),
+            buttonText = stringResource(R.string.error_dialog_button_text),
+            onDismiss = { nutritionGoalViewModel.dismissErrorDialog() },
         )
     }
 }
@@ -381,7 +350,7 @@ fun CalculateGoalButton(
             )
         } else {
             Text(
-                text = "Calcular objetivo",
+                text = stringResource(R.string.nutrition_goal_button_text),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -398,7 +367,7 @@ fun NutritionGoalTopBar(
     TopAppBar(
         title = {
             Text(
-                text = "Registrar objetivo nutricional",
+                text = stringResource(R.string.nutrition_goal_screen_title),
                 fontSize = 18.sp
             )
         },

@@ -2,18 +2,30 @@ package com.luisvertiz.nutriscan.features.nutritiongoal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.luisvertiz.nutriscan.R
+import com.luisvertiz.nutriscan.error.ErrorHandler.UnknownError
 import com.luisvertiz.nutriscan.model.ActivityLevelModel
 import com.luisvertiz.nutriscan.model.GenderModel
-import com.luisvertiz.nutriscan.model.GoalModel
+import com.luisvertiz.nutriscan.model.DiabetesTypeModel
 import com.luisvertiz.nutriscan.model.NutritionGoalModel
 import com.luisvertiz.nutriscan.model.NutritionResultModel
+import com.luisvertiz.nutriscan.util.NutritionConstants.AGE_FACTOR
+import com.luisvertiz.nutriscan.util.NutritionConstants.HEIGHT_FACTOR
+import com.luisvertiz.nutriscan.util.NutritionConstants.WEIGHT_FACTOR
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.Period
 import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 
 @HiltViewModel
@@ -21,214 +33,161 @@ class NutritionGoalViewModel @Inject constructor(
     private val repository: NutritionGoalRepository
 ) : ViewModel() {
 
-    private val _birthDate: MutableStateFlow<String> = MutableStateFlow("")
-    val birthDate: StateFlow<String> = _birthDate
+    private val _uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
 
-    private val _gender: MutableStateFlow<GenderModel?> = MutableStateFlow(null)
-    val gender: StateFlow<GenderModel?> = _gender
+    private val _uiEffect: MutableSharedFlow<UiEffect> = MutableSharedFlow()
+    val uiEffect: SharedFlow<UiEffect> = _uiEffect
 
-    private val _activityLevel: MutableStateFlow<ActivityLevelModel?> = MutableStateFlow(null)
-    val activityLevel: StateFlow<ActivityLevelModel?> = _activityLevel
-
-    private val _mainGoalModel: MutableStateFlow<GoalModel?> = MutableStateFlow(null)
-    val mainGoalModel: StateFlow<GoalModel?> = _mainGoalModel
-
-    private val _weight: MutableStateFlow<String> = MutableStateFlow("")
-    val weight: StateFlow<String> = _weight
-
-    private val _height: MutableStateFlow<String> = MutableStateFlow("")
-    val height: StateFlow<String> = _height
-
-    private val _isEnabledCalculateGoalButton: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isEnabledCalculateGoalButton: StateFlow<Boolean> = _isEnabledCalculateGoalButton
-
-    private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
-
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
-
-    private val _goToNutritionResult: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val goToNutritionResult: StateFlow<Boolean> = _goToNutritionResult
-
-    fun setBirthDate(date: String) {
-        viewModelScope.launch {
-            _birthDate.value = date
-            validateInputs()
-        }
+    fun setBirthDate(dateMillis: Long) = viewModelScope.launch {
+        val sdf = SimpleDateFormat("dd / MM / yyyy", Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        val date = sdf.format(Date(dateMillis))
+        _uiState.update { it.copy(birthDate = date) }
+        validateInputs()
     }
 
-    fun setGender(gender: GenderModel) {
-        viewModelScope.launch {
-            _gender.value = gender
-            validateInputs()
-        }
+    fun setBirthDate(date: String) = viewModelScope.launch {
+        _uiState.update { it.copy(birthDate = date) }
+        validateInputs()
     }
 
-    fun setActivityLevel(activityLevel: ActivityLevelModel) {
-        viewModelScope.launch {
-            _activityLevel.value = activityLevel
-            validateInputs()
-        }
+    fun setGender(gender: GenderModel) = viewModelScope.launch {
+        _uiState.update { it.copy(gender = gender) }
+        validateInputs()
     }
 
-    fun setMainGoal(mainGoalModel: GoalModel) {
-        viewModelScope.launch {
-            _mainGoalModel.value = mainGoalModel
-            validateInputs()
-        }
+    fun setActivityLevel(activityLevel: ActivityLevelModel) = viewModelScope.launch {
+        _uiState.update { it.copy(activityLevel = activityLevel) }
+        validateInputs()
     }
 
-    fun setWeight(weight: String) {
-        viewModelScope.launch {
-            _weight.value = weight
-            validateInputs()
-        }
+    fun setDiabetesType(diabetesType: DiabetesTypeModel) = viewModelScope.launch {
+        _uiState.update { it.copy(diabetesType = diabetesType) }
+        validateInputs()
     }
 
-    fun setHeight(height: String) {
-        viewModelScope.launch {
-            _height.value = height
-            validateInputs()
-        }
+    fun setWeightKg(weightKg: String) = viewModelScope.launch {
+        _uiState.update { it.copy(weightKg = weightKg) }
+        validateInputs()
+    }
+
+    fun setHeightCm(heightCm: String) = viewModelScope.launch {
+        _uiState.update { it.copy(heightCm = heightCm) }
+        validateInputs()
     }
 
     fun validateInputs() {
         viewModelScope.launch {
-            val hasBirthdate: Boolean = _birthDate.value.isNotEmpty()
-            val hasGender: Boolean = _gender.value != null
-            val hasActivityLevel: Boolean = _activityLevel.value != null
-            val hasWeight: Boolean = _weight.value.isNotEmpty()
-            val hasHeight: Boolean = _height.value.isNotEmpty()
-            val isEnabledLoginButton: Boolean = hasBirthdate && hasGender && hasActivityLevel && hasWeight && hasHeight
-            _isEnabledCalculateGoalButton.value = isEnabledLoginButton
+            val hasBirthdate: Boolean = _uiState.value.birthDate.isNotEmpty()
+            val hasGender: Boolean = _uiState.value.gender != null
+            val hasActivityLevel: Boolean = _uiState.value.activityLevel != null
+            val hasWeight: Boolean = _uiState.value.weightKg.isNotEmpty()
+            val hasHeight: Boolean = _uiState.value.heightCm.isNotEmpty()
+            val isEnabledCalculateGoalButton: Boolean = hasBirthdate && hasGender && hasActivityLevel && hasWeight && hasHeight
+            _uiState.update { it.copy(isEnabledCalculateGoalButton = isEnabledCalculateGoalButton) }
         }
     }
 
     // Formula de Mifflin-St Jeor.
-    fun calculateNutritionGoal() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
+    fun calculateNutritionGoal() = viewModelScope.launch {
+        _uiState.update { it.copy(isLoading = true) }
+        val age: Int = calculateAge()
+        val bmr: Double = calculateBMR(age)
+        val dailyCalories: Double = calculateTDEE(bmr)
+        val dailyCarbsGr: Int = calculateDailyCarbs(dailyCalories)
 
-                val tmb: Double = calculateTMB()
-                val tdee: Double = calculateTDEE(tmb = tmb)
-                val dailyCalories: Double = calculateDailyCalories(tdee = tdee)
-                val dailyProteinGr: Double = calculateDailyProtein()
-                val dailyFatGr: Double = calculateDailyFat()
-                val dailyCarbsGr: Double = calculateDailyCarbs(
-                    dailyCalories = dailyCalories,
-                    proteinGr = dailyProteinGr,
-                    fatGr = dailyFatGr
-                )
-
-                saveNutritionGoal(
-                    dailyCalories = dailyCalories,
-                    dailyProtein = dailyProteinGr,
-                    dailyCarbs = dailyCarbsGr,
-                    dailyFat = dailyFatGr
-                )
-            } catch (e: Exception) {
-                _errorMessage.value = e.message ?: "Ocurrió un error inesperado"
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        saveNutritionGoal(
+            dailyCalories = dailyCalories,
+            dailyCarbsGr = dailyCarbsGr,
+        )
     }
 
     // tasa metabolica basal
-    private fun calculateTMB(): Double {
-        val weightKg: Double = _weight.value.toDoubleOrNull() ?: 0.0
-        val heightCm: Double = _height.value.toDoubleOrNull() ?: 0.0
-        val age: Int = calculateAge()
-        val genderNutritionFactor: Int = _gender.value?.nutritionFactor ?: 0
+    private fun calculateBMR(age: Int): Double {
+        val weightKg: Double = _uiState.value.weightKg.toDoubleOrNull() ?: 0.0
+        val heightCm: Double = _uiState.value.heightCm.toDoubleOrNull() ?: 0.0
+        val genderBMROffset: Int = _uiState.value.gender?.bmrOffset ?: 0
 
-        val tmb: Double = (weightKg * 10 ) + (heightCm * 6.25) - (age * 5) + genderNutritionFactor
+        val tmb: Double = (weightKg * WEIGHT_FACTOR) + (heightCm * HEIGHT_FACTOR) - (age * AGE_FACTOR) + genderBMROffset
         return tmb
     }
 
     // tasa de calorias de mantenimiento
-    private fun calculateTDEE(tmb: Double): Double {
-        val levelActivityNutritionFactor: Double = _activityLevel.value?.nutritionFactor ?: 0.0
-        return tmb * levelActivityNutritionFactor
+    private fun calculateTDEE(bmr: Double): Double {
+        val levelActivityNutritionFactor: Double = _uiState.value.activityLevel?.nutritionFactor ?: 0.0
+        return bmr * levelActivityNutritionFactor
     }
 
-    private fun calculateDailyCalories(tdee: Double): Double {
-        val mainGoalNutritionFactor: Double = _mainGoalModel.value?.nutritionFactor ?: 0.0
-        val dailyCalories: Double = tdee * mainGoalNutritionFactor
-        return dailyCalories
-    }
-
-    private fun calculateDailyProtein(): Double {
-        val weightKg: Double = _weight.value.toDoubleOrNull() ?: 0.0
-        val proteinFactor: Double = _mainGoalModel.value?.proteinFactor ?: 0.0
-        return weightKg * proteinFactor
-    }
-
-    private fun calculateDailyFat(): Double {
-        val weightKg: Double = _weight.value.toDoubleOrNull() ?: 0.0
-        val fatFactor: Double = _mainGoalModel.value?.fatFactor ?: 0.0
-        return weightKg * fatFactor
-    }
-
-    private fun calculateDailyCarbs(
-        dailyCalories: Double,
-        proteinGr: Double,
-        fatGr: Double
-    ): Double {
-        val proteinCalories = proteinGr * 4
-        val fatCalories = fatGr * 9
-        val remainingCalories = dailyCalories - proteinCalories - fatCalories
-        return remainingCalories / 4
+    private fun calculateDailyCarbs(dailyCalories: Double): Int {
+        val dailyCarbs: Int = ((dailyCalories * 0.4) / 4.0).toInt()
+        return dailyCarbs
     }
 
     private fun calculateAge(): Int {
         return try {
-            val formatter = DateTimeFormatter.ofPattern("dd / MM / yyyy")
-            val birthDate = LocalDate.parse(_birthDate.value, formatter)
+            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd / MM / yyyy")
+            val birthDate: LocalDate = LocalDate.parse(_uiState.value.birthDate, formatter)
             Period.between(birthDate, LocalDate.now()).years
-        } catch (exception: Exception) {
+        } catch (_: Exception) {
             0
         }
     }
 
-    private fun saveNutritionGoal(
-        dailyCalories: Double,
-        dailyProtein: Double,
-        dailyCarbs: Double,
-        dailyFat: Double
-    ) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
+    private fun saveNutritionGoal(dailyCalories: Double, dailyCarbsGr: Int) = viewModelScope.launch {
+        try {
+            _uiState.update { it.copy(isLoading = true) }
 
-                val nutritionGoalModel = NutritionGoalModel(
-                    birthDate = _birthDate.value,
-                    gender = _gender.value,
-                    weightKg = _weight.value.toDoubleOrNull(),
-                    heightCm = _height.value.toIntOrNull(),
-                    activityLevel = _activityLevel.value,
-                    goalModel = _mainGoalModel.value,
-                    nutritionResult = NutritionResultModel(
-                        dailyCalories = dailyCalories,
-                        dailyProtein = dailyProtein,
-                        dailyCarbs = dailyCarbs,
-                        dailyFat = dailyFat,
-                    ),
-                )
+            val nutritionGoalModel = NutritionGoalModel(
+                birthDate = _uiState.value.birthDate,
+                gender = _uiState.value.gender,
+                weightKg = _uiState.value.weightKg.toDoubleOrNull(),
+                heightCm = _uiState.value.heightCm.toIntOrNull(),
+                activityLevel = _uiState.value.activityLevel,
+                diabetesTypeModel = _uiState.value.diabetesType,
+                nutritionResult = NutritionResultModel(
+                    dailyCalories = dailyCalories,
+                    dailyCarbsGr = dailyCarbsGr,
+                ),
+            )
 
-                repository.saveNutritionGoal(nutritionGoalModel)
-                _goToNutritionResult.value = true
-            } catch (exception: Exception) {
-                _errorMessage.value = exception.message
-            } finally {
-                _isLoading.value = false
-            }
-
+            repository.saveNutritionGoal(nutritionGoalModel)
+            _uiEffect.emit(value = UiEffect.GoToNutritionResult)
+        } catch (exception: Exception) {
+            handleError(exception)
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
-    fun dismissError() = viewModelScope.launch {
-        _errorMessage.value = ""
+    private fun handleError(exception: Exception) = viewModelScope.launch {
+        val idErrorMessage = when (exception) {
+            is UnknownError -> R.string.error_unknown
+            else -> R.string.error_unknown
+        }
+        _uiState.update { it.copy(idErrorMessage = idErrorMessage) }
+    }
+
+    fun dismissErrorDialog() = viewModelScope.launch {
+        _uiState.update { it.copy(idErrorMessage = null) }
+    }
+
+    fun showDatePicker(show: Boolean) = viewModelScope.launch {
+        _uiState.update { it.copy(showDatePicker = show) }
+    }
+
+    fun toggleGenderDropdown() = viewModelScope.launch {
+        val isExpandedGenderDropdown: Boolean = _uiState.value.isExpandedGenderDropdown
+        _uiState.update { it.copy(isExpandedGenderDropdown = isExpandedGenderDropdown.not()) }
+    }
+
+    fun toggleActivityLevelDropdown() = viewModelScope.launch {
+        val isExpandedActivityLevelDropdown: Boolean = _uiState.value.isExpandedActivityLevelDropdown
+        _uiState.update { it.copy(isExpandedActivityLevelDropdown = isExpandedActivityLevelDropdown.not()) }
+    }
+
+    fun toggleDiabetesTypeDropdown() = viewModelScope.launch {
+        val isExpandedDiabetesTypeDropdown: Boolean = _uiState.value.isExpandedDiabetesTypeDropdown
+        _uiState.update { it.copy(isExpandedDiabetesTypeDropdown = isExpandedDiabetesTypeDropdown.not()) }
     }
 }

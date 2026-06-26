@@ -6,6 +6,6 @@ data class NutritionGoalModel(
     val weightKg: Double? = null,
     val heightCm: Int? = null,
     val activityLevel: ActivityLevelModel? = null,
-    val goalModel: GoalModel? = null,
+    val diabetesTypeModel: DiabetesTypeModel? = null,
     val nutritionResult: NutritionResultModel? = null,
 )

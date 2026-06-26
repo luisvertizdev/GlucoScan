@@ -1,10 +1,8 @@
 package com.luisvertiz.nutriscan.features.register
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,12 +31,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -46,8 +45,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.luisvertiz.nutriscan.R
+import com.luisvertiz.nutriscan.component.ErrorDialog
 import com.luisvertiz.nutriscan.navigation.main.MainNavigationRoute
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 
@@ -58,23 +59,29 @@ fun RegisterScreen(
     registerViewModel: RegisterViewModel = hiltViewModel(),
     mainNavController: NavHostController,
 ) {
-    val fullName: String by registerViewModel.fullName.collectAsState()
-    val email: String by registerViewModel.email.collectAsState()
-    val password: String by registerViewModel.password.collectAsState()
-    val confirmPassword: String by registerViewModel.confirmPassword.collectAsState()
-    val isEnabledRegisterButton: Boolean by registerViewModel.isEnabledRegisterButton.collectAsState()
-    val isLoading: Boolean by registerViewModel.isLoading.collectAsState()
-    val errorMessage: String? by registerViewModel.errorMessage.collectAsState()
-    val successRegisterMessage: String? by registerViewModel.successRegisterMessage.collectAsState()
-    val isPasswordVisible: Boolean by registerViewModel.isPasswordVisible.collectAsState()
-    val isConfirmPasswordVisible: Boolean by registerViewModel.isConfirmPasswordVisible.collectAsState()
+    val uiState: UiState by registerViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        registerViewModel.uiEffect.collect { effect ->
+            when(effect) {
+                is UiEffect.GoBack -> {
+                    mainNavController.popBackStack()
+                }
+                is UiEffect.GoToLogin -> {
+                    mainNavController.navigate(MainNavigationRoute.Login) {
+                        popUpTo(MainNavigationRoute.Register) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier,
         containerColor = Color.White,
         topBar = {
             RegisterTopBar(
-                onBackClick = {  mainNavController.popBackStack() }
+                onBackClick = { registerViewModel.goBack() }
             )
         },
         content = { contentPadding ->
@@ -92,10 +99,10 @@ fun RegisterScreen(
                     contentDescription = null
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 FullNameTextField(
-                    fullName = fullName,
+                    fullName = uiState.fullName,
                     onFullNameValueChange = { fullName ->
                         registerViewModel.setFullName(fullName)
                         registerViewModel.validateInputs()
@@ -105,7 +112,7 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 EmailTextField(
-                    email = email,
+                    email = uiState.email,
                     onEmailValueChange = { email ->
                         registerViewModel.setEmail(email)
                         registerViewModel.validateInputs()
@@ -115,8 +122,8 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 PasswordTextField(
-                    password = password,
-                    isPasswordVisible = isPasswordVisible,
+                    password = uiState.password,
+                    isPasswordVisible = uiState.isPasswordVisible,
                     onPasswordValueChange = { password ->
                         registerViewModel.setPassword(password)
                         registerViewModel.validateInputs()
@@ -127,8 +134,8 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ConfirmPasswordTextField(
-                    confirmPassword = confirmPassword,
-                    isConfirmPasswordVisible = isConfirmPasswordVisible,
+                    confirmPassword = uiState.confirmPassword,
+                    isConfirmPasswordVisible = uiState.isConfirmPasswordVisible,
                     onConfirmPasswordValueChange = { confirmPassword ->
                         registerViewModel.setConfirmPassword(confirmPassword)
                         registerViewModel.validateInputs()
@@ -139,30 +146,29 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 RegisterButton(
-                    isLoading = isLoading,
-                    isEnabledRegisterButton = isEnabledRegisterButton,
+                    isLoading = uiState.isLoading,
+                    isEnabledRegisterButton = uiState.isEnabledRegisterButton,
                     onRegisterClick = { registerViewModel.register() }
                 )
             }
         }
     )
 
-    if (errorMessage != null) {
+    uiState.idErrorMessage?.let { idErrorMessage ->
         ErrorDialog(
-            errorMessage = errorMessage.orEmpty(),
-            onDismiss = { registerViewModel.dismissErrorDialog() }
+            message = stringResource(idErrorMessage),
+            buttonText = stringResource(R.string.error_dialog_button_text),
+            onDismiss = { registerViewModel.dismissErrorDialog() },
         )
     }
 
-    if (successRegisterMessage != null) {
+    uiState.idSuccessRegisterMessage?.let { idSuccessRegisterMessage ->
         SuccessRegisterDialog(
-            successRegisterMessage = successRegisterMessage.orEmpty(),
+            successRegisterMessage = stringResource(idSuccessRegisterMessage),
             onDismiss = { registerViewModel.dismissSuccessRegisterDialog() },
             onGoToLogin = {
                 registerViewModel.dismissSuccessRegisterDialog()
-                mainNavController.navigate(MainNavigationRoute.Login) {
-                    popUpTo(MainNavigationRoute.Register) { inclusive = true }
-                }
+                registerViewModel.goToLogin()
             }
         )
     }
@@ -170,13 +176,13 @@ fun RegisterScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterTopBar(
-    onBackClick: () -> Unit
+private fun RegisterTopBar(
+    onBackClick: () -> Unit,
 ) {
     TopAppBar(
         title = {
             Text(
-                text = "Crear cuenta",
+                text = stringResource(R.string.register_screen_title),
                 fontSize = 18.sp
             )
         },
@@ -197,13 +203,14 @@ fun RegisterTopBar(
 }
 
 @Composable
-fun FullNameTextField(
+private fun FullNameTextField(
     fullName: String,
-    onFullNameValueChange: (fullName: String) -> Unit) {
+    onFullNameValueChange: (fullName: String) -> Unit,
+) {
     OutlinedTextField(
         value = fullName,
         onValueChange = { fullName -> onFullNameValueChange(fullName) },
-        label = { Text("Nombres completos") },
+        label = { Text(stringResource(R.string.label_full_name)) },
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
         singleLine = true,
@@ -216,14 +223,14 @@ fun FullNameTextField(
 }
 
 @Composable
-fun EmailTextField(
+private fun EmailTextField(
     email: String,
-    onEmailValueChange: (email: String) -> Unit
+    onEmailValueChange: (email: String) -> Unit,
 ) {
     OutlinedTextField(
         value = email,
         onValueChange = { email -> onEmailValueChange(email) },
-        label = { Text("Correo electrónico") },
+        label = { Text(stringResource(R.string.label_email)) },
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         singleLine = true,
@@ -236,16 +243,16 @@ fun EmailTextField(
 }
 
 @Composable
-fun PasswordTextField(
+private fun PasswordTextField(
     password: String,
     isPasswordVisible: Boolean,
     onPasswordValueChange: (password: String) -> Unit,
-    onPasswordVisibilityClick: () -> Unit
+    onPasswordVisibilityClick: () -> Unit,
 ) {
     OutlinedTextField(
         value = password,
         onValueChange = { password -> onPasswordValueChange(password) },
-        label = { Text("Contraseña") },
+        label = { Text(stringResource(R.string.label_password)) },
         modifier = Modifier.fillMaxWidth(),
         visualTransformation = if (isPasswordVisible) {
             VisualTransformation.None
@@ -275,16 +282,16 @@ fun PasswordTextField(
 }
 
 @Composable
-fun ConfirmPasswordTextField(
+private fun ConfirmPasswordTextField(
     confirmPassword: String,
     isConfirmPasswordVisible: Boolean,
     onConfirmPasswordValueChange: (confirmPassword: String) -> Unit,
-    onConfirmPasswordVisibilityClick: () -> Unit
+    onConfirmPasswordVisibilityClick: () -> Unit,
 ) {
     OutlinedTextField(
         value = confirmPassword,
         onValueChange = { confirmPassword -> onConfirmPasswordValueChange(confirmPassword) },
-        label = { Text("Confirmar contraseña") },
+        label = { Text(stringResource(R.string.label_confirm_password)) },
         modifier = Modifier.fillMaxWidth(),
         visualTransformation = if (isConfirmPasswordVisible) {
             VisualTransformation.None
@@ -314,10 +321,10 @@ fun ConfirmPasswordTextField(
 }
 
 @Composable
-fun RegisterButton(
+private fun RegisterButton(
     isLoading: Boolean,
     isEnabledRegisterButton: Boolean,
-    onRegisterClick: () -> Unit
+    onRegisterClick: () -> Unit,
 ) {
     Button(
         onClick = { onRegisterClick() },
@@ -335,7 +342,7 @@ fun RegisterButton(
             )
         } else {
             Text(
-                text = "Registrarse",
+                text = stringResource(R.string.register_button_text),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -345,33 +352,10 @@ fun RegisterButton(
 }
 
 @Composable
-fun ErrorDialog(
-    errorMessage: String,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = { onDismiss() },
-        text = {
-            Text(text = errorMessage)
-        },
-        confirmButton = {
-            Button(
-                onClick = { onDismiss() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryGreen
-                )
-            ) {
-                Text("Entendido")
-            }
-        }
-    )
-}
-
-@Composable
-fun SuccessRegisterDialog(
+private fun SuccessRegisterDialog(
     successRegisterMessage: String,
     onDismiss: () -> Unit,
-    onGoToLogin: () -> Unit
+    onGoToLogin: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = { onDismiss() },
@@ -385,7 +369,7 @@ fun SuccessRegisterDialog(
                     containerColor = PrimaryGreen
                 )
             ) {
-                Text("Ir a iniciar sesión")
+                Text(stringResource(R.string.go_to_login))
             }
         }
     )

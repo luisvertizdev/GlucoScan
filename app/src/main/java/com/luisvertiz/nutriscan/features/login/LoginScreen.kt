@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,12 +31,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -45,8 +44,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.luisvertiz.nutriscan.R
+import com.luisvertiz.nutriscan.component.ErrorDialog
 import com.luisvertiz.nutriscan.navigation.main.MainNavigationRoute
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 
@@ -57,18 +58,19 @@ fun LoginScreen(
     loginViewModel: LoginViewModel = hiltViewModel(),
     mainNavController: NavHostController,
 ) {
-    val email: String by loginViewModel.email.collectAsState()
-    val password: String by loginViewModel.password.collectAsState()
-    val isEnabledLoginButton: Boolean by loginViewModel.isEnabledLoginButton.collectAsState()
-    val goToLanding: Boolean by loginViewModel.goToLanding.collectAsState()
-    val isLoading: Boolean by loginViewModel.isLoading.collectAsState()
-    val errorMessage: String? by loginViewModel.errorMessage.collectAsState()
-    val isPasswordVisible: Boolean by loginViewModel.isPasswordVisible.collectAsState()
+    val uiState: UiState by loginViewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(goToLanding) {
-        if (goToLanding) {
-            mainNavController.navigate(MainNavigationRoute.Landing) {
-                popUpTo(MainNavigationRoute.Login) { inclusive = true }
+    LaunchedEffect(Unit) {
+        loginViewModel.uiEffect.collect { effect ->
+            when(effect) {
+                is UiEffect.GoToRegister -> {
+                    mainNavController.navigate(MainNavigationRoute.Register)
+                }
+                is UiEffect.GoToDashboard -> {
+                    mainNavController.navigate(MainNavigationRoute.Dashboard) {
+                        popUpTo(MainNavigationRoute.Login) { inclusive = true }
+                    }
+                }
             }
         }
     }
@@ -91,10 +93,10 @@ fun LoginScreen(
                     contentDescription = null
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 EmailTextField(
-                    email = email,
+                    email = uiState.email,
                     onEmailValueChange = { email ->
                         loginViewModel.setEmail(email)
                         loginViewModel.validateInputs()
@@ -104,8 +106,8 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 PasswordTextField(
-                    password = password,
-                    isPasswordVisible = isPasswordVisible,
+                    password = uiState.password,
+                    isPasswordVisible = uiState.isPasswordVisible,
                     onPasswordValueChange = { password ->
                         loginViewModel.setPassword(password)
                         loginViewModel.validateInputs()
@@ -116,37 +118,38 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 LoginButton(
-                    isLoading = isLoading,
-                    isEnabledLoginButton = isEnabledLoginButton,
+                    isLoading = uiState.isLoading,
+                    isEnabledLoginButton = uiState.isEnabledLoginButton,
                     onLoginClick = { loginViewModel.login() }
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 RegisterSection(
-                    onRegisterClick = { mainNavController.navigate(MainNavigationRoute.Register) }
+                    onRegisterClick = { loginViewModel.goToRegister() }
                 )
             }
         }
     )
 
-    if (errorMessage != null) {
+    uiState.idErrorMessage?.let { idErrorMessage ->
         ErrorDialog(
-            errorMessage = errorMessage.orEmpty(),
-            onDismiss = { loginViewModel.dismissErrorDialog() }
+            message = stringResource(idErrorMessage),
+            buttonText = stringResource(R.string.error_dialog_button_text),
+            onDismiss = { loginViewModel.dismissErrorDialog() },
         )
     }
 }
 
 @Composable
-fun EmailTextField(
+private fun EmailTextField(
     email: String,
-    onEmailValueChange: (email: String) -> Unit
+    onEmailValueChange: (email: String) -> Unit,
 ) {
     OutlinedTextField(
         value = email,
         onValueChange = { email -> onEmailValueChange(email) },
-        label = { Text("Correo electrónico") },
+        label = { Text(stringResource(R.string.label_email)) },
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         singleLine = true,
@@ -159,16 +162,16 @@ fun EmailTextField(
 }
 
 @Composable
-fun PasswordTextField(
+private fun PasswordTextField(
     password: String,
     isPasswordVisible: Boolean,
     onPasswordValueChange: (password: String) -> Unit,
-    onPasswordVisibilityClick: () -> Unit
+    onPasswordVisibilityClick: () -> Unit,
 ) {
     OutlinedTextField(
         value = password,
         onValueChange = { password -> onPasswordValueChange(password) },
-        label = { Text("Contraseña") },
+        label = { Text(stringResource(R.string.label_password)) },
         modifier = Modifier.fillMaxWidth(),
         visualTransformation = if (isPasswordVisible) {
             VisualTransformation.None
@@ -197,10 +200,10 @@ fun PasswordTextField(
 }
 
 @Composable
-fun LoginButton(
+private fun LoginButton(
     isLoading: Boolean,
     isEnabledLoginButton: Boolean,
-    onLoginClick: () -> Unit
+    onLoginClick: () -> Unit,
 ) {
     Button(
         onClick = { onLoginClick() },
@@ -218,7 +221,7 @@ fun LoginButton(
             )
         } else {
             Text(
-                text = "Iniciar sesión",
+                text = stringResource(R.string.login_button_text),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -228,8 +231,8 @@ fun LoginButton(
 }
 
 @Composable
-fun RegisterSection(
-    onRegisterClick: () -> Unit
+private fun RegisterSection(
+    onRegisterClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -237,7 +240,7 @@ fun RegisterSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "¿No tienes una cuenta? ",
+            text = stringResource(R.string.text_no_account),
             fontSize = 14.sp,
             color = Color.DarkGray
         )
@@ -245,34 +248,11 @@ fun RegisterSection(
         Spacer(modifier = Modifier.width(4.dp))
 
         Text(
-            text = "Regístrate",
+            text = stringResource(R.string.text_register),
             fontSize = 14.sp,
             color = PrimaryGreen,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable { onRegisterClick() }
         )
     }
-}
-
-@Composable
-fun ErrorDialog(
-    errorMessage: String,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = { onDismiss() },
-        text = {
-            Text(text = errorMessage)
-        },
-        confirmButton = {
-            Button(
-                onClick = { onDismiss() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryGreen
-                )
-            ) {
-                Text("Entendido")
-            }
-        }
-    )
 }

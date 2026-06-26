@@ -3,9 +3,14 @@ package com.luisvertiz.nutriscan.features.register
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.luisvertiz.nutriscan.R
+import com.luisvertiz.nutriscan.error.ErrorHandler.EmailAlreadyRegisteredError
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -14,96 +19,92 @@ class RegisterViewModel @Inject constructor(
     private val registerRepository: RegisterRepository
 ) : ViewModel() {
 
-    private val _fullName: MutableStateFlow<String> = MutableStateFlow("")
-    val fullName: StateFlow<String> = _fullName
+    private val _uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
 
-    private val _email: MutableStateFlow<String> = MutableStateFlow("")
-    val email: StateFlow<String> = _email
+    private val _uiEffect: MutableSharedFlow<UiEffect> = MutableSharedFlow()
+    val uiEffect: SharedFlow<UiEffect> = _uiEffect
 
-    private val _password: MutableStateFlow<String> = MutableStateFlow("")
-    val password: StateFlow<String> = _password
+    fun setFullName(fullName: String) = viewModelScope.launch {
+        _uiState.update { it.copy(fullName = fullName) }
+    }
 
-    private val _confirmPassword: MutableStateFlow<String> = MutableStateFlow("")
-    val confirmPassword: StateFlow<String> = _confirmPassword
+    fun setEmail(email: String) = viewModelScope.launch {
+        _uiState.update { it.copy(email = email) }
+    }
 
-    private val _isEnabledRegisterButton: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isEnabledRegisterButton: StateFlow<Boolean> = _isEnabledRegisterButton
+    fun setPassword(password: String) = viewModelScope.launch {
+        _uiState.update { it.copy(password = password) }
+    }
 
-    private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    fun setConfirmPassword(confirmPassword: String) = viewModelScope.launch {
+        _uiState.update { it.copy(confirmPassword = confirmPassword) }
+    }
 
-    private val _successRegisterMessage: MutableStateFlow<String?> = MutableStateFlow(null)
-    val successRegisterMessage: StateFlow<String?> = _successRegisterMessage
+    fun validateInputs() = viewModelScope.launch {
+        val email: String = _uiState.value.email
+        val isEmailValid: Boolean = Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+        val password: String = _uiState.value.password
+        val confirmPassword: String = _uiState.value.confirmPassword
+        val isPasswordValid: Boolean = password.length >= 8 && confirmPassword.length >= 8
+        val isPasswordMatching: Boolean = password == confirmPassword
 
-    private val _isPasswordVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isPasswordVisible: StateFlow<Boolean> = _isPasswordVisible
+        val isEnabledRegisterButton: Boolean = isEmailValid && isPasswordValid && isPasswordMatching
+        _uiState.update { it.copy(isEnabledRegisterButton = isEnabledRegisterButton) }
+    }
 
-    private val _isConfirmPasswordVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isConfirmPasswordVisible: StateFlow<Boolean> = _isConfirmPasswordVisible
+    fun register() = viewModelScope.launch {
+        try {
+            _uiState.update { it.copy(isLoading = true) }
 
-    fun setFullName(fullName: String) {
-        viewModelScope.launch {
-            _fullName.value = fullName
+            val fullName: String = _uiState.value.fullName
+            val email: String = _uiState.value.email
+            val password: String = _uiState.value.password
+            registerRepository.register(
+                fullName = fullName,
+                email = email,
+                password = password,
+            )
+            _uiState.update { it.copy(idSuccessRegisterMessage = R.string.success_register) }
+        } catch (exception: Exception) {
+            handleError(exception)
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
-    fun setEmail(email: String) {
-        viewModelScope.launch {
-            _email.value = email
+    private fun handleError(exception: Exception) = viewModelScope.launch {
+        val idErrorMessage = when (exception) {
+            is EmailAlreadyRegisteredError -> R.string.error_email_already_registered
+            else -> R.string.error_unknown
         }
-    }
-
-    fun setPassword(password: String) {
-        viewModelScope.launch {
-            _password.value = password
-        }
-    }
-
-    fun setConfirmPassword(confirmPassword: String) {
-        viewModelScope.launch {
-            _confirmPassword.value = confirmPassword
-        }
-    }
-
-    fun validateInputs() {
-        viewModelScope.launch {
-            val isEmailValid: Boolean = Patterns.EMAIL_ADDRESS.matcher(_email.value).matches()
-            val isPasswordValid: Boolean = _password.value.length >= 8
-            val isPasswordMatching: Boolean = _password.value == _confirmPassword.value
-            _isEnabledRegisterButton.value = isEmailValid && isPasswordValid && isPasswordMatching
-        }
-    }
-
-    fun register() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                registerRepository.register(_fullName.value,_email.value, _password.value)
-                _successRegisterMessage.value = "Registro exitoso, verifica tu correo electrónico para poder iniciar sesión."
-            } catch (exception: Exception) {
-                _errorMessage.value = exception.message
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        _uiState.update { it.copy(idErrorMessage = idErrorMessage) }
     }
 
     fun dismissErrorDialog() = viewModelScope.launch {
-        _errorMessage.value = null
+        _uiState.update { it.copy(idErrorMessage = null) }
     }
 
     fun dismissSuccessRegisterDialog() = viewModelScope.launch {
-        _successRegisterMessage.value = null
+        _uiState.update { it.copy(idErrorMessage = null) }
     }
 
-    fun togglePasswordVisibility() {
-        _isPasswordVisible.value = !_isPasswordVisible.value
+    fun togglePasswordVisibility() = viewModelScope.launch {
+        val isPasswordVisible: Boolean = _uiState.value.isPasswordVisible
+        _uiState.update { it.copy(isPasswordVisible = isPasswordVisible.not()) }
     }
 
-    fun toggleConfirmPasswordVisibility() {
-        _isConfirmPasswordVisible.value = _isConfirmPasswordVisible.value.not()
+    fun toggleConfirmPasswordVisibility() = viewModelScope.launch {
+        val isConfirmPasswordVisible: Boolean = _uiState.value.isConfirmPasswordVisible
+        _uiState.update { it.copy(isConfirmPasswordVisible = isConfirmPasswordVisible.not()) }
+    }
+
+    fun goBack() = viewModelScope.launch {
+        _uiEffect.emit(value = UiEffect.GoBack)
+    }
+
+    fun goToLogin() = viewModelScope.launch {
+        _uiEffect.emit(value = UiEffect.GoToLogin)
     }
 }

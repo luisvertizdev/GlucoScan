@@ -1,4 +1,4 @@
-package com.luisvertiz.nutriscan.features.landing
+package com.luisvertiz.nutriscan.features.dashboard
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -7,24 +7,26 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.luisvertiz.nutriscan.navigation.bottombar.BottomBarNavigationHost
+import com.luisvertiz.nutriscan.navigation.bottombar.BottomBarNavigationRoute
 
 @Composable
-fun LandingScreen(
-    mainNavController: NavHostController
+fun DashboardScreen(
+    mainNavController: NavHostController,
 ) {
     val bottomBarNavController: NavHostController = rememberNavController()
 
     Scaffold(
         bottomBar = {
-            LandingBottomBar(
-                bottomBarNavController = bottomBarNavController
+            DashboardBottomBar(
+                bottomBarNavController = bottomBarNavController,
             )
         },
         content = { contentPadding ->
             BottomBarNavigationHost(
                 mainNavController = mainNavController,
                 bottomBarNavController = bottomBarNavController,
-                modifier = Modifier.padding(contentPadding)
+                modifier = Modifier.padding(contentPadding),
+                startDestination = BottomBarNavigationRoute.Home,
             )
         }
     )

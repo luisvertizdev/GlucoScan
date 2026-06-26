@@ -1,6 +1,7 @@
 package com.luisvertiz.nutriscan.navigation.main
 
 import kotlinx.serialization.Serializable
+import com.luisvertiz.nutriscan.model.FoodAnalysisModel
 
 sealed interface MainNavigationRoute {
     @Serializable
@@ -16,5 +17,14 @@ sealed interface MainNavigationRoute {
     data object NutritionResult : MainNavigationRoute
 
     @Serializable
-    data object Landing : MainNavigationRoute
+    data object Dashboard : MainNavigationRoute
+
+    @Serializable
+    data object FoodCamera : MainNavigationRoute
+
+    @Serializable
+    data class FoodResult(
+        val foodAnalysis: FoodAnalysisModel,
+        val imagePath: String,
+    ) : MainNavigationRoute
 }
