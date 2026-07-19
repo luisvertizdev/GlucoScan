@@ -31,7 +31,7 @@ class HomeViewModel @Inject constructor(
         getUser()
     }
 
-    private fun getUser() = viewModelScope.launch {
+    fun getUser() = viewModelScope.launch {
         try {
             _uiState.update { it.copy(isLoading = true) }
             val user: UserModel = homeRepository.getUser()

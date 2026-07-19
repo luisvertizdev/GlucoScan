@@ -21,7 +21,7 @@ object FoodPromptBuilder {
             "fiber": 0,
             "glycemicIndex": 0,
             "glycemicLoad": 0,
-            "glycemicImpact": "BAJO|MEDIO|ALTO",
+            "glycemicImpact": "Bajo|Medio|Alto",
             "recommendation": "string"
         }
     

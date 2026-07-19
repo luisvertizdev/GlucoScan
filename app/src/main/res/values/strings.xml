@@ -90,4 +90,26 @@
 
     <string name="focus_camera_text">Enfoca la cámara hacia tu comida</string>
 
+    <string name="camera_permission_denied_message">El permiso de cámara es necesario para escanear comida</string>
+    <string name="camera_permission_go_to_settings_action">Ir a Configuración</string>
+
+    <string name="history_screen_title">Historial</string>
+
+    <string name="nutrition_details_title">Ver más detalles</string>
+    <string name="nutrition_details_summary">Resumen de tus métricas clave del día.</string>
+    <string name="label_energy_consumed">Energía total consumida</string>
+    <string name="label_carbs_glucose_impact">Afectan directamente tus niveles de glucosa</string>
+    <string name="label_glycemic_impact_glucose">Cómo tu comida ha afectado tu glucosa</string>
+    <string name="label_consumed">Consumidas</string>
+    <string name="label_target">Objetivo</string>
+    <string name="label_average_impact">Impacto promedio</string>
+    <string name="label_impact_level">Nivel de impacto</string>
+    <string name="label_low">Bajo</string>
+    <string name="label_medium">Medio</string>
+    <string name="label_high">Alto</string>
+    <string name="unit_of_target">del objetivo</string>
+
+    <string name="unit_minimum">0</string>
+
+
 </resources>

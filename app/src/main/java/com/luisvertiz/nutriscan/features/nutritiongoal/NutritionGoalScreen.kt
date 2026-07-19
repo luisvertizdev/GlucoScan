@@ -332,7 +332,7 @@ fun NutritionGoalScreen(
 fun CalculateGoalButton(
     isLoading: Boolean,
     isEnabledCalculateGoalButton: Boolean,
-    onCalculateGoalClick: () -> Unit
+    onCalculateGoalClick: () -> Unit,
 ) {
     Button(
         onClick = { onCalculateGoalClick() },

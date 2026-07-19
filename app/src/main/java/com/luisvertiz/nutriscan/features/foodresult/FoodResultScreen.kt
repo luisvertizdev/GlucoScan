@@ -24,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +50,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.luisvertiz.nutriscan.R
+import com.luisvertiz.nutriscan.component.ErrorDialog
 import com.luisvertiz.nutriscan.model.FoodAnalysisModel
+import com.luisvertiz.nutriscan.navigation.main.MainNavigationRoute
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 import com.luisvertiz.nutriscan.ui.theme.PrimaryOrange
 import com.luisvertiz.nutriscan.ui.theme.PrimaryRed
@@ -82,6 +85,20 @@ fun FoodResultScreen(
             foodAnalysis = foodAnalysis,
             imagePath = imagePath,
         )
+    }
+
+    LaunchedEffect(Unit) {
+        foodResultViewModel.uiEffect.collect { effect ->
+            when (effect) {
+                is UiEffect.GoToDashboard -> {
+                    mainNavController.navigate(MainNavigationRoute.Dashboard) {
+                        popUpTo<MainNavigationRoute.Dashboard> {
+                            inclusive = true
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -236,24 +253,27 @@ fun FoodResultScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-            ) {
-                Text(
-                    text = stringResource(R.string.button_save_food),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
+            SaveMealButton(
+                isLoading = uiState.isLoadingSaveMeal,
+                onSaveMealClick = {
+                    foodResultViewModel.saveMeal(
+                        foodAnalysis = foodAnalysis,
+                        imagePath = imagePath,
+                    )
+                }
+            )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+
+    uiState.idErrorMessage?.let { idErrorMessage ->
+        ErrorDialog(
+            message = stringResource(idErrorMessage),
+            buttonText = stringResource(R.string.error_dialog_button_text),
+            onDismiss = { foodResultViewModel.dismissErrorDialog() },
+        )
     }
 }
 
@@ -305,5 +325,37 @@ fun NutritionItem(label: String, value: String) {
             fontWeight = FontWeight.Bold,
             color = Color.Black
         )
+    }
+}
+
+@Composable
+fun SaveMealButton(
+    isLoading: Boolean,
+    onSaveMealClick: () -> Unit,
+) {
+    Button(
+        onClick = {
+            onSaveMealClick()
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(36.dp),
+                trackColor = Color.White,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.button_save_food),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
     }
 }

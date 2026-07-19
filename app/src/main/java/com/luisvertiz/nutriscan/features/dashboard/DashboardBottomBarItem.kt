@@ -20,18 +20,18 @@ val dashboardBottomBarItems: List<LandingBottomBarItem> = listOf(
         title = R.string.dashboard_bottom_bar_item_home,
         icon = Icons.Default.Home,
         route = BottomBarNavigationRoute.Home,
-        isEnabled = true
+        isEnabled = true,
     ),
     LandingBottomBarItem(
         title = R.string.dashboard_bottom_bar_item_history,
         icon = Icons.Default.History,
         route = BottomBarNavigationRoute.History,
-        isEnabled = false
+        isEnabled = true,
     ),
     LandingBottomBarItem(
         title = R.string.dashboard_bottom_bar_item_profile,
         icon = Icons.Default.Person,
         route = BottomBarNavigationRoute.Profile,
-        isEnabled = true
+        isEnabled = true,
     )
 )

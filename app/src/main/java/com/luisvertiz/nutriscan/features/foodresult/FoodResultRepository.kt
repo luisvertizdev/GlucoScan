@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.luisvertiz.nutriscan.error.ErrorHandler.UnknownError
 import com.luisvertiz.nutriscan.model.FoodAnalysisModel
+import com.luisvertiz.nutriscan.model.GlycemicImpactModel
 import com.luisvertiz.nutriscan.model.MealModel
 import com.luisvertiz.nutriscan.util.FirestoreConstants.MEALS_COLLECTION
 import com.luisvertiz.nutriscan.util.FirestoreConstants.USERS_COLLECTION
@@ -13,8 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
 import javax.inject.Inject
+import kotlin.random.Random
 
 class FoodResultRepository @Inject constructor() {
 
@@ -24,46 +25,53 @@ class FoodResultRepository @Inject constructor() {
     ) = withContext(Dispatchers.IO) {
         try {
             val firebaseAuth = FirebaseAuth.getInstance()
+
             val firebaseUser = firebaseAuth.currentUser ?: throw UnknownError()
-            
-            val imageUrl = uploadImage(firebaseUser.uid, imagePath)
-            
+
+            val firebaseFirestore = FirebaseFirestore.getInstance()
+
+            val mealRef = firebaseFirestore
+                .collection(USERS_COLLECTION)
+                .document(firebaseUser.uid)
+                .collection(MEALS_COLLECTION)
+                .document()
+
+            val mealId = mealRef.id
+
+            val imageUrl = uploadImage(
+                userId = firebaseUser.uid,
+                mealId = mealId,
+                imagePath = imagePath
+            )
+
             val meal = MealModel(
-                id = UUID.randomUUID().toString(),
+                id = Random.nextLong().toString(),
                 foodName = foodAnalysis.foodName,
                 calories = foodAnalysis.calories,
                 carbs = foodAnalysis.carbs,
                 protein = foodAnalysis.protein,
                 fat = foodAnalysis.fat,
                 fiber = foodAnalysis.fiber,
-                glycemicIndex = foodAnalysis.glycemicIndex,
-                glycemicLoad = foodAnalysis.glycemicLoad,
-                glycemicImpact = foodAnalysis.glycemicImpact,
-                recommendation = foodAnalysis.recommendation,
+                glycemicImpact = GlycemicImpactModel.identify(foodAnalysis.glycemicImpact),
                 imageUrl = imageUrl,
                 timestamp = System.currentTimeMillis()
             )
 
-            val firebaseFirestore = FirebaseFirestore.getInstance()
-            firebaseFirestore
-                .collection(USERS_COLLECTION)
-                .document(firebaseUser.uid)
-                .collection(MEALS_COLLECTION)
-                .document(meal.id)
-                .set(meal)
-                .await()
+            mealRef.set(meal).await()
 
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             throw UnknownError()
         }
     }
 
-    private suspend fun uploadImage(userId: String, imagePath: String): String {
+    private suspend fun uploadImage(
+        userId: String,
+        mealId: String,
+        imagePath: String,
+    ): String {
         val storageRef = FirebaseStorage.getInstance().reference
-        val imageRef = storageRef.child("meals/$userId/${UUID.randomUUID()}.jpg")
+        val imageRef = storageRef.child("meals/$userId/$mealId.jpg")
         val file = Uri.fromFile(File(imagePath))
-        
         imageRef.putFile(file).await()
         return imageRef.downloadUrl.await().toString()
     }

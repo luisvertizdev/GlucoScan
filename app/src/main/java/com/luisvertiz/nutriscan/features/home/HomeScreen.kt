@@ -1,5 +1,10 @@
 package com.luisvertiz.nutriscan.features.home
 
+import android.Manifest
+import android.content.Context
+import android.content.res.Resources
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,20 +35,29 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -55,8 +69,11 @@ import com.luisvertiz.nutriscan.ui.theme.PrimaryGray
 import com.luisvertiz.nutriscan.ui.theme.PrimaryGreen
 import com.luisvertiz.nutriscan.ui.theme.TextPrimary
 import com.luisvertiz.nutriscan.ui.theme.TextSecondary
+import com.luisvertiz.nutriscan.util.goToSettings
 import ir.ehsannarmani.compose_charts.PieChart
 import ir.ehsannarmani.compose_charts.models.Pie
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +82,29 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState: UiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val context: Context = LocalContext.current
+    val resources: Resources = LocalResources.current
+    val scope: CoroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            homeViewModel.goToFoodCamera()
+        } else {
+            scope.launch {
+                val result = snackbarHostState.showSnackbar(
+                    message = resources.getString(R.string.camera_permission_denied_message),
+                    actionLabel = resources.getString(R.string.camera_permission_go_to_settings_action),
+                    duration = SnackbarDuration.Long
+                )
+                if (result == SnackbarResult.ActionPerformed) { 
+                    context.goToSettings()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         homeViewModel.uiEffect.collect { effect ->
@@ -81,6 +121,7 @@ fun HomeScreen(
 
     Scaffold(
         containerColor = Color.White,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         content = { contentPadding ->
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -117,12 +158,17 @@ fun HomeScreen(
                             DailyNutritionSummary(
                                 goalCarbs = uiState.user.nutritionGoal?.nutritionResult?.dailyCarbsGr ?: 0,
                                 consumedCarbs = uiState.totalConsumedCarbs,
+                                onSeeDetailsClick = {
+                                    rootNavController.navigate(MainNavigationRoute.NutritionDetails)
+                                }
                             )
 
                             Spacer(modifier = Modifier.height(24.dp))
 
                             ScanFoodButton(
-                                onScanFoodClick = { homeViewModel.goToFoodCamera() },
+                                onScanFoodClick = {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                },
                             )
                         }
                     }
@@ -203,6 +249,7 @@ private fun TodaySummaryHeader(
 private fun DailyNutritionSummary(
     goalCarbs: Int,
     consumedCarbs: Int,
+    onSeeDetailsClick: () -> Unit,
 ) {
     val remainingCarbs = (goalCarbs - consumedCarbs).coerceAtLeast(0)
     val percentage = if (goalCarbs > 0) consumedCarbs * 100 / goalCarbs else 0
@@ -324,7 +371,7 @@ private fun DailyNutritionSummary(
 
             TextButton(
                 modifier = Modifier.align(Alignment.End),
-                onClick = {}
+                onClick = { onSeeDetailsClick() }
             ) {
                 Text(
                     text = stringResource(R.string.daily_nutrition_summary_see_details_button_text),

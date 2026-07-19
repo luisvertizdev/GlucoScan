@@ -11,6 +11,7 @@ import com.luisvertiz.nutriscan.features.dashboard.DashboardScreen
 import com.luisvertiz.nutriscan.features.foodcamera.FoodCameraScreen
 import com.luisvertiz.nutriscan.features.foodresult.FoodResultScreen
 import com.luisvertiz.nutriscan.features.login.LoginScreen
+import com.luisvertiz.nutriscan.features.nutritiondetails.NutritionDetailsScreen
 import com.luisvertiz.nutriscan.features.nutritionresult.NutritionResultScreen
 import com.luisvertiz.nutriscan.features.nutritiongoal.NutritionGoalScreen
 import com.luisvertiz.nutriscan.features.register.RegisterScreen
@@ -74,6 +75,12 @@ fun NavigationHost(
                 mainNavController = mainNavController,
                 foodAnalysis = foodResult.foodAnalysis,
                 imagePath = foodResult.imagePath,
+            )
+        }
+
+        composable<MainNavigationRoute.NutritionDetails> {
+            NutritionDetailsScreen(
+                mainNavController = mainNavController,
             )
         }
     }

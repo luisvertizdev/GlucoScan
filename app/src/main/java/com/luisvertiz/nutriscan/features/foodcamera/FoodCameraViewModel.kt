@@ -4,6 +4,7 @@ import android.app.Application
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.FirebaseApp
 import com.luisvertiz.nutriscan.error.ErrorHandler
 import com.luisvertiz.nutriscan.model.FoodAnalysisModel
 import com.luisvertiz.nutriscan.util.FileUtil
@@ -59,6 +60,7 @@ class FoodCameraViewModel @Inject constructor(
     fun analyzeFood(bitmap: Bitmap) = viewModelScope.launch {
         try {
             _uiState.update { it.copy(isLoading = true) }
+            println("projectId ${FirebaseApp.getInstance().options.projectId}")
             val foodAnalysisModel: FoodAnalysisModel = foodCameraRepository.analyzeFood(
                 bitmap = bitmap,
             )

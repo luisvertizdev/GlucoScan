@@ -2,7 +2,6 @@ package com.luisvertiz.nutriscan.model
 
 enum class DiabetesTypeModel(
     val description: String,
-
 ) {
     PRE_DIABETES(
         description = "Prediabetes",

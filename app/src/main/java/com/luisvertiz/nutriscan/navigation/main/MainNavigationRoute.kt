@@ -27,4 +27,7 @@ sealed interface MainNavigationRoute {
         val foodAnalysis: FoodAnalysisModel,
         val imagePath: String,
     ) : MainNavigationRoute
+
+    @Serializable
+    data object NutritionDetails : MainNavigationRoute
 }
